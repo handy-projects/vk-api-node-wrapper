@@ -14,7 +14,7 @@ function authorize(appId, login, pass, cb) {
     request = request.defaults({
         jar:                cookieJar,
         headers:            {
-            'User-Agent': 'nodejs-vk-api/1.0'
+            'User-Agent': 'vk-api-node-wrapper/1.0'
         },
         followAllRedirects: true
     });
@@ -127,12 +127,22 @@ function authorize(appId, login, pass, cb) {
                                 url:    link,
                                 method: 'POST'
                             }, function (err, res) {
-                                var access_token = /access_token=([a-f0-9]+)/.exec(res.request.uri.hash);
-                                if (!access_token[1])
+                                /*console.log('req uri:');
+                                console.dir(res.request.uri);*/
+                                var access_token = /access_token=([a-f0-9]+)/.exec(res.request.uri.hash)[1];
+                                var expires_in = /expires_in=([a-f0-9]+)/.exec(res.request.uri.hash)[1];
+
+                                /*console.log('access_token:');
+                                console.dir(access_token);
+
+                                console.log('expires_in:');
+                                console.dir(expires_in);*/
+
+                                if (!access_token)
                                     return errorCallback(new Error('Invalid access_token'));
 
-                                self.access_token = access_token[1];
-                                cb(null, self.access_token);
+                                self.access_token = access_token;
+                                cb(null, self.access_token, expires_in);
 
                                 self.emit('auth', self.access_token);
                             });

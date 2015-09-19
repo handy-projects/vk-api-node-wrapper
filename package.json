@@ -1,14 +1,14 @@
 {
-    "name":         "vk-dirty-api",
+    "name":         "vk-api-node-wrapper",
     "version":      "1.0.0",
-    "description":  "Wrapper for using VK API within your project as a Standalone application",
+    "description":  "Wrapper for using VK API in Node.JS",
     "main":         "index.js",
     "scripts":      {
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "repository":   {
         "type": "git",
-        "url":  "git://github.com/v12/node-vk-api.git"
+        "url":  "git@github.com:handy-projects/vk-api-node-wrapper.git"
     },
     "keywords":     [
         "vk",
@@ -16,9 +16,9 @@
         "vk.com",
         "api",
         "vk",
-        "api"
+        "node-vk-api"
     ],
-    "author":       "v6 <nikita.v6+npmjs@icloud.com>",
+    "author":       "Grievoushead <sergiy.kozachenko@gmail.com>",
     "license":      "MIT",
     "dependencies": {
         "request": "^2.34.0",
