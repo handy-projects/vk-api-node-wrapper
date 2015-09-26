@@ -5,16 +5,15 @@ var request = require('request'),
     util = require('util'),
     EventEmitter = require('events').EventEmitter;
 
-function authorize(appId, login, pass, cb) {
+function authorize(args) {
     var cookieJar = request.jar();
 
     var self = this;
-    self.access_token = false;
 
     request = request.defaults({
         jar:                cookieJar,
         headers:            {
-            'User-Agent': 'vk-api-node-wrapper/1.0'
+            'User-Agent': args.ua || 'vk-api-node-wrapper/1.0'
         },
         followAllRedirects: true
     });
@@ -45,110 +44,30 @@ function authorize(appId, login, pass, cb) {
         ]
     };
 
-    var params;
-    if (typeof appId === 'object') {
-        params = extend(default_params, appId);
-        cb = login;
-        pass = params.pass;
-        login = params.login;
-        appId = params.client_id;
-    }
-    else {
-        params = extend(default_params, {
-            client_id: appId,
-            login:     login,
-            pass:      pass
-        });
-    }
+    var params = extend(default_params, args);
+    var pass = params.pass;
+    var login = params.login;
+    var access_token = params.access_token;
+    var appId = params.client_id;
 
-    // in case if only EventEmitter is used
-    if (typeof cb !== 'function')
-        cb = function () {};
+    self.access_token = access_token;
 
     var errorCallback = function (err) {
         self.emit('error', err);
-        typeof cb !== 'function' && cb(err);
     };
 
     var e;
     if (parseInt(appId) <= 0)
         e = new Error('Invalid client_id');
-    else if (login.length <= 0)
+    else if ((!login || login.length) <= 0 && access_token.length <= 0)
         e = new Error('Login was not defined');
-    else if (pass.length <= 0)
+    else if ((!pass || pass.length <= 0) && access_token.length <= 0)
         e = new Error('Password was not defined');
 
     if(e) {
         errorCallback(e);
         return self;
     }
-    else
-        request({
-                url: url.format({
-                    protocol: 'https',
-                    host:     'oauth.vk.com',
-                    pathname: 'authorize',
-                    query:    {
-                        client_id:     params.client_id,
-                        scope:         params.scope.join(','),
-                        redirect_uri:  'https://oauth.vk.com/blank.html',
-                        display:       'mobile',
-                        v:             '5.21',
-                        response_type: 'token'
-                    }
-                })
-            },
-            function (err, r, body) {
-                if (err)
-                    return cb(err);
-
-                var nextQuery = getLoginFormData(body);
-
-                if (!('email' in nextQuery.form))
-                    return errorCallback(new Error('Unable to fetch login page'));
-
-                nextQuery.form.email = params.login;
-                nextQuery.form.pass = params.pass;
-
-                request({
-                        url:    nextQuery.url,
-                        method: 'POST',
-                        form:   nextQuery.form
-                    },
-                    function (err, r, body) {
-                        if (err)
-                            return errorCallback(err);
-
-                        getAllowLink(body, function (err, link) {
-                            if (err)
-                                return errorCallback(err);
-
-                            request({
-                                url:    link,
-                                method: 'POST'
-                            }, function (err, res) {
-                                /*console.log('req uri:');
-                                console.dir(res.request.uri);*/
-                                var access_token = /access_token=([a-f0-9]+)/.exec(res.request.uri.hash)[1];
-                                var expires_in = /expires_in=([a-f0-9]+)/.exec(res.request.uri.hash)[1];
-
-                                /*console.log('access_token:');
-                                console.dir(access_token);
-
-                                console.log('expires_in:');
-                                console.dir(expires_in);*/
-
-                                if (!access_token)
-                                    return errorCallback(new Error('Invalid access_token'));
-
-                                self.access_token = access_token;
-                                cb(null, self.access_token, expires_in);
-
-                                self.emit('auth', self.access_token);
-                            });
-                        })
-                    });
-            });
 
     function getLoginFormData(html) {
         var $ = cheerio.load(html),
@@ -218,6 +137,75 @@ function authorize(appId, login, pass, cb) {
         });
 
         return this;
+    };
+
+    self.auth = function(cb) {
+      request({
+            url: url.format({
+                protocol: 'https',
+                host:     'oauth.vk.com',
+                pathname: 'authorize',
+                query:    {
+                    client_id:     params.client_id,
+                    scope:         params.scope.join(','),
+                    redirect_uri:  'https://oauth.vk.com/blank.html',
+                    display:       'mobile',
+                    v:             '5.21',
+                    response_type: 'token'
+                }
+            })
+        },
+        function (err, r, body) {
+            if (err)
+                return cb(err);
+
+            var nextQuery = getLoginFormData(body);
+
+            if (!('email' in nextQuery.form))
+                return errorCallback(new Error('Unable to fetch login page'));
+
+            nextQuery.form.email = params.login;
+            nextQuery.form.pass = params.pass;
+
+            request({
+                    url:    nextQuery.url,
+                    method: 'POST',
+                    form:   nextQuery.form
+                },
+                function (err, r, body) {
+                    if (err)
+                        return errorCallback(err);
+
+                    getAllowLink(body, function (err, link) {
+                        if (err)
+                            return errorCallback(err);
+
+                        request({
+                            url:    link,
+                            method: 'POST'
+                        }, function (err, res) {
+                            /*console.log('req uri:');
+                            console.dir(res.request.uri);*/
+                            var access_token = /access_token=([a-f0-9]+)/.exec(res.request.uri.hash)[1];
+                            var expires_in = /expires_in=([a-f0-9]+)/.exec(res.request.uri.hash)[1];
+
+                            /*console.log('access_token:');
+                            console.dir(access_token);
+
+                            console.log('expires_in:');
+                            console.dir(expires_in);*/
+
+                            if (!access_token)
+                                return errorCallback(new Error('Invalid access_token'));
+
+                            self.access_token = access_token;
+                            cb(null, self.access_token, expires_in);
+
+                            self.emit('auth', self.access_token);
+                        });
+                    })
+                });
+        });
     };
 
     return self;
