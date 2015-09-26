@@ -1,6 +1,6 @@
 {
     "name":         "vk-api-node-wrapper",
-    "version":      "1.0.0",
+    "version":      "1.0.1",
     "description":  "Wrapper for using VK API in Node.JS",
     "main":         "index.js",
     "scripts":      {
